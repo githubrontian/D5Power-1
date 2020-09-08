@@ -10,6 +10,7 @@
 		"libs/d5sdk.d.ts",
 		"src/ui/IProBindingContainer.ts",
 		"src/ui/IProBindingSupport.ts",
+		"src/ResLibParser.ts",
 		"src/D5Component.ts",
 		"src/D5Loop.ts",
 		"src/D5Lib.ts",
@@ -34,6 +35,7 @@
 		"src/D5UILoader.ts",
 		"src/D5VBox.ts",
 		"src/D5Window.ts",
+		"src/D5Music.ts",
 		"src/ListCell.ts"
     ]
 }

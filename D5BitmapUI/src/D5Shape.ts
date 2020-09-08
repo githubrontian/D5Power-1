@@ -67,8 +67,14 @@ module d5power {
         private _points:Array<string>;
 
         private _shape:egret.Shape;
+
+        private _maskName:string = '';
+
+        private _waitTime:number;
         
         public drawAlpha:number = 1;
+
+        public lineAlpha:number = 1;
         
         public constructor()
         {
@@ -77,12 +83,33 @@ module d5power {
             this.addChild(this._shape);
         }
         
-        public set pointString(value:String)
+        public set pointString(value:string)
 		{
 			this._points = value.split(',');
 			this.invalidate();
 		}
         
+        public set maskName(value:string)
+        {
+            this._maskName = value;
+            this._waitTime = egret.getTimer();
+			this.addEventListener(egret.Event.ENTER_FRAME,this.waitMasker,this);
+        }
+
+        private waitMasker(e:egret.Event):void
+        {
+            if(egret.getTimer()-this._waitTime>5000)
+			{
+				this.removeEventListener(egret.Event.ENTER_FRAME,this.waitMasker,this);
+				return;
+			}
+			if(this.parent && this.parent.getChildByName(this._maskName)!=null)
+			{
+				this.parent.getChildByName(this._maskName).mask = this;
+				this.removeEventListener(egret.Event.ENTER_FRAME,this.waitMasker,this);
+			}
+        }
+
         public draw():void
         {
             if(this._shape)this._shape.graphics.clear();
@@ -92,7 +119,7 @@ module d5power {
                      this._shape.graphics.beginFill(this._fillColor,this.drawAlpha);
                     if(this._tickNess>0)
                     {
-                        this._shape.graphics.lineStyle(this._tickNess, this._color,this.drawAlpha);
+                        this._shape.graphics.lineStyle(this._tickNess, this._color,this.lineAlpha);
                     }
                     this._shape.graphics.drawRect(this._offX,this._offY,this._w,this._h);
                     this._shape.graphics.endFill();
@@ -101,13 +128,13 @@ module d5power {
                     this._shape.graphics.beginFill(this._fillColor,this.drawAlpha);
                     if(this._tickNess>0)
                     {
-                        this._shape.graphics.lineStyle(this._tickNess, this._color,this.drawAlpha);
+                        this._shape.graphics.lineStyle(this._tickNess, this._color,this.lineAlpha);
                     }
                     this._shape.graphics.drawCircle(this._offX,this._offY,this._radius);
                     this._shape.graphics.endFill();
                     break;
                 case D5Shape.CUSTOM:
-                    this._shape.graphics.beginFill(this._fillColor,this.drawAlpha);
+                    this._shape.graphics.beginFill(this._fillColor,this.lineAlpha);
                     if(this._tickNess>0)
 					{
 						this._shape.graphics.lineStyle(this._tickNess,this._color);

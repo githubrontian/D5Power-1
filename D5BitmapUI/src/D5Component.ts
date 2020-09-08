@@ -30,6 +30,7 @@ module d5power
 {
     export class D5Component extends egret.Sprite 
     {
+        public static UIPostion:string = 'd5power_uiposition';
         private static _actionList:Array<D5Component>=[];
         private static _actionTimer:egret.Timer;
         private static _actionRunning:boolean=false;
@@ -93,6 +94,23 @@ module d5power
          */
         protected _belone:string;
         protected _moveAction:number = 0;
+        /**
+         * 对齐模式
+         */
+        protected _marginMode:number;
+        /**
+         * 相对坐标
+         */
+        protected _relx:number;
+        /**
+         * 相对坐标
+         */
+        protected _rely:number;
+        
+        /**
+         * 对齐目标
+         */
+        protected _margin_target:string
         
 
 		public get moveAction():number
@@ -104,7 +122,14 @@ module d5power
 		{
 			this._moveAction = value;
 		}
-		
+        /**
+         * 动画顺序
+         */
+        public animationIndex:number;
+        /**
+         * 携带数据
+         */
+        public extdata:any;
 		public startX:number;
 		public startY:number;
 		private static _me:D5Component;
@@ -274,9 +299,9 @@ module d5power
 				this.addChild(arr[i]);
             }
             
-            this.parent.setChildIndex(this,0);
-		}
-
+            //this.parent.setChildIndex(this,0);
+        }
+        
         public setSkin(name:string):void
         {
             
@@ -342,14 +367,16 @@ module d5power
                     {
                         uiObj._belone = res;
                         list.push(uiObj);
+                    }else{
+                        src = comObj.src;
+                        if(src && D5UIResourceData.getData(src)==null)
+                        {
+                            uiObj._belone = res;
+                            list.push(uiObj);
+                        }
                     }
 
-                    src = comObj.src;
-                    if(src && D5UIResourceData.getData(src)==null)
-                    {
-                        uiObj._belone = res;
-                        list.push(uiObj);
-                    }
+                    
                     container.addChild(uiObj);
                 }
 
@@ -466,6 +493,12 @@ module d5power
                     com = new d5power.D5Bitmap();
                     com.name = value.name;
                     com.setSkin(value.skinId);
+                    (<d5power.D5Bitmap>com).script = value.script;
+                    if(value.anchor!='')
+                    {
+                        com.anchorOffsetX = value.width*value.anchor;
+                        com.anchorOffsetY = value.height*value.anchor;
+                    }
                     com.x = value.x;
                     com.y = value.y;
                     if(value.rotation!=0) com.rotation = value.rotation;
@@ -520,7 +553,7 @@ module d5power
                     (<D5Text>com).setLtBorder(value.ltColor);
                     (<D5Text>com).setRbBorder(value.rbColor);
                     (<D5Text>com).setWrapFlg(value.wrapType);
-                    (<D5Text>com).setIsPassword((<boolean>value.password));
+                    (<D5Text>com).setIsPassword(value.password=='1' ? true : false);
                     (<D5Text>com).setTextID((value.textID).toString());
                     (<D5Text>com)._binding = value.binding;
                     if(container) container[com.name] = com;
@@ -577,6 +610,7 @@ module d5power
                     com.x = value.x;
                     com.y = value.y;
                     (<D5Shape>com).drawAlpha = value.fillAlpha==null ? 1 : value.fillAlpha;
+                    (<D5Shape>com).lineAlpha = value.tickNessAlpha==null ? 1 : value.tickNessAlpha;
                     (<D5Shape>com).setWorkMode(value.workMode);
                     (<D5Shape>com).setFillColor(value.fillColor);
                     (<D5Shape>com).setTickNess(value.tickNess);
@@ -585,6 +619,7 @@ module d5power
                     (<D5Shape>com).setOffY(value.offY);
                     (<D5Shape>com).setSize(value.width,value.height);
                     (<D5Shape>com).setRadius(value.radius);
+                    (<D5Shape>com).maskName = value.maskName;
                     (<D5Shape>com).pointString = value.pointString;
                     if(container) container[com.name] = com;
                     break;
@@ -598,16 +633,116 @@ module d5power
                     com.setSize(value.width,value.height);
                     if(container) container[com.name] = com;
                     break;
+                case "D5Music":
+                    com = new D5Music();
+                    com.name = value.name;
+                    com.x = value.x;
+                    com.y = value.y;
+                    (<D5Music>com).loop = value.loop=='1';
+                    (<D5Music>com).src = value.src;
+                    (<D5Music>com).autoPlay = value.autoPlay=='1';
+                    (<D5Music>com).keep = value.keep=='1';
+                    if(container) container[com.name] = com;
+                    break;
             }
             com.startX = value.x;
-			com.startY = value.y;
-			com.moveAction = parseInt(value.moveAction);
+            com.startY = value.y;
+            var scalex:number = Number(value.scalex);
+            var scaley:number = Number(value.scaley);
+            if(!isNaN(scalex) && scalex!=1.0) com.scaleX = scalex;
+            if(!isNaN(scaley) && scaley!=1.0) com.scaleY = scaley;
+            com.moveAction = parseInt(value.moveAction);
+            com._marginMode = parseInt(value.margin_mode);
+			if(com._marginMode!=0)
+			{
+                com.setRelPos(Number(value.relx),Number(value.rely),value.margin_target);
+            }
             return com;
+        }
+
+        /**
+         * 设置相对坐标
+         * @param px 
+         * @param py 
+         * @param margin_target 
+         */
+        protected setRelPos(px:number,py:number,margin_target:string):void
+        {
+            if(isNaN(px) || isNaN(py)) return;
+            this._relx = px;
+            this._rely = py;
+            this._margin_target = margin_target;
+
+            if(margin_target!=null && margin_target!='' && margin_target!='null')
+            {
+                var target:D5Component;
+				if(this._margin_target!=null && this._margin_target!='')
+				{
+					target = <D5Component>this.parent.getChildByName(this._margin_target);
+					if(target) target.removeEventListener(D5Component.UIPostion,this.autoFllowPos,this);
+				}
+				
+				this._margin_target = margin_target;
+				var waitBegin:number = egret.getTimer();
+                var lastWait:number = waitBegin;
+                var that:D5Component = this;
+				var cancleWait:Function = function(e:Event=null):void
+				{
+					this.removeEventListener(egret.Event.ENTER_FRAME,wait,this);
+					this.removeEventListener(egret.Event.REMOVED_FROM_STAGE,cancleWait,this);
+				}
+				var wait:Function = function(e:Event=null):void
+				{
+					var t:number = egret.getTimer();
+					if(t-lastWait<500) return;
+					if(t-waitBegin>5000)
+					{
+						cancleWait();
+						return;
+					}
+					lastWait = t;
+					target = <D5Component>this.parent.getChildByName(this._margin_target);
+					if(target)
+					{
+						cancleWait();
+						target.addEventListener(D5Component.UIPostion,this.autoFllowPos,this);
+						var evt:egret.Event = new egret.Event(egret.Event.ACTIVATE);
+						this.autoFllowPos(evt);
+					}
+				}
+				
+				this.addEventListener(egret.Event.ENTER_FRAME,wait,this);
+				this.addEventListener(egret.Event.REMOVED_FROM_STAGE,cancleWait,this);
+            }
+        }
+
+        protected autoFllowPos(e:egret.Event=null):void
+        {
+            if(!parent) return;
+			if(e==null)
+			{
+				// 舞台对齐
+				this.x = Math.floor(this._relx*(this.parent.width));
+				this.y = Math.floor(this._rely*(this.parent.height));
+			}else{
+				var target:D5Component = <D5Component> (e.type==egret.Event.ACTIVATE ? this.parent.getChildByName(this._margin_target) : e.currentTarget);
+				if(target)
+				{
+					this.x = target.x+this._relx+(this._relx>0 ? target.width*target.scaleX : (this._relx<0 ? -this.width*this.scaleX : 0));
+					this.y = target.y+this._rely+(this._rely>0 ? target.height*target.height : (this._rely<0 ? -this.height*this.scaleY : 0));
+				}
+			}
+        }
+        
+        $setX(v:number):boolean
+        {
+            this.dispatchEvent(new egret.Event(D5Component.UIPostion));
+            return super.$setX(v);
         }
 
         public dispose():void
         {
-
+            
         }
 
         protected invalidate():void

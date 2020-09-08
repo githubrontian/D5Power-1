@@ -39,6 +39,11 @@ module d5power
         private _onComplateObj:any;
 
         /**
+         * 运行脚本
+         */
+        public script:string;
+
+        /**
          * 默认贴图
          */
         private static _defaultTexture:egret.Texture = new egret.Texture();
@@ -58,6 +63,11 @@ module d5power
                 this.bit.fillMode = b ? egret.BitmapFillMode.REPEAT : egret.BitmapFillMode.SCALE;
             else
                 this._isLoopFill = b ? 1 : 0;
+        }
+
+        public get texture():egret.Texture
+        {
+            return this.bit ? this.bit.texture : null;
         }
 
         public setSkin(name:string):void
@@ -87,7 +97,7 @@ module d5power
 
             if(!isNaN(this._isLoopFill) && this._isLoopFill) this.loop = true; 
             this.bit.texture = data.getResource(0);
-            this.setSize(this.bit.$getWidth(),this.bit.$getHeight());
+            if(isNaN(this._w) || isNaN(this._h)) this.setSize(this.bit.$getWidth(),this.bit.$getHeight());
             this.invalidate();
         }
 
@@ -113,9 +123,27 @@ module d5power
             var b:D5Bitmap = new D5Bitmap();
             b.setSize(this._w,this._h);
             b.setRes(this.bit==null ? null : this.bit.texture);
+            b.anchorOffsetX = this.anchorOffsetX;
+            b.anchorOffsetY = this.anchorOffsetY;
             return b;
         }
 
+        /**
+         * 通过网址加载图片素材，本方法支持跨域
+         * @param url 需要加载的图片地址
+         */
+        public loadUrl(url:string):void
+        {
+            var that:D5Bitmap = this;
+            var loader:egret.ImageLoader = new egret.ImageLoader();
+            loader.crossOrigin = 'anonymous';
+            loader.once(egret.Event.COMPLETE,function(e:egret.Event):void{
+                var t:egret.Texture = new egret.Texture();
+                t.bitmapData = loader.data;
+                this.setRes(t);
+            },this);
+            loader.load(url);
+        }
 
         public setRes(data:egret.Texture):void
         {
@@ -133,7 +161,7 @@ module d5power
             }
             this.bit.texture = data;
             if(!isNaN(this._isLoopFill) && this._isLoopFill) this.loop = true; 
-            this.setSize(this.bit.$getWidth(),this.bit.$getHeight());
+            if(isNaN(this._w) || isNaN(this._h)) this.setSize(this.bit.$getWidth(),this.bit.$getHeight());
             //this.invalidate();
 
             if(this._onComplate!=null)
@@ -161,7 +189,7 @@ module d5power
                     this.addChildAt(this.bit,0);
                 }
                 
-                if(this.bit.fillMode==egret.BitmapFillMode.REPEAT)
+                if(this.bit.fillMode==egret.BitmapFillMode.SCALE)
                 {
                     this.bit.width = this._w;
                     this.bit.height = this._h;
